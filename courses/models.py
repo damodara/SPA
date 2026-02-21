@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -6,6 +7,13 @@ class Course(models.Model):
     description = models.TextField(verbose_name="Описание курса", blank=True, null=True)
     preview = models.ImageField(
         upload_to="courses/image", verbose_name="Превью", blank=True, null=True
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Владелец",
     )
 
     class Meta:
@@ -21,6 +29,14 @@ class Lesson(models.Model):
     )
     video_link = models.URLField(
         unique=True, verbose_name="Ссылка на видео", blank=True, null=True
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Курс",
+        related_name="lesson_set",
     )
 
     class Meta:
