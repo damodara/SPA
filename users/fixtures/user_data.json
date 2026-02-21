@@ -1,0 +1,28 @@
+[
+  {
+    "model": "users.user",
+    "pk": 1,
+    "fields": {
+      "email": "admin@example.com",
+      "password": "pbkdf2_sha256$600000$aBXUJzG3N7QX9YlqWgZvZd/abc123...",
+      "first_name": "",
+      "last_name": "",
+      "phone": "+79001234567",
+      "city": "Москва",
+      "avatar": null
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 2,
+    "fields": {
+      "email": "user1@example.com",
+      "password": "pbkdf2_sha256$600000$aBXUJzG3N7QX9YlqWgZvZd/abc123...",
+      "first_name": "",
+      "last_name": "",
+      "phone": "+79001234568",
+      "city": "СПб",
+      "avatar": null
+    }
+  }
+]
