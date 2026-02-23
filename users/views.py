@@ -1,8 +1,10 @@
 from rest_framework.filters import OrderingFilter
+from rest_framework.generics import UpdateAPIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 
-from users.models import Payment
-from users.serializers import PaymentSerializer
+from users.models import Payment, User
+from users.serializers import PaymentSerializer, UserProfileSerializer
 
 
 class PaymentViewSet(ModelViewSet):
@@ -23,3 +25,16 @@ class PaymentViewSet(ModelViewSet):
         if method:
             qs = qs.filter(method=method)
         return qs
+
+
+class UserProfileUpdateView(UpdateAPIView):
+    """
+    API endpoint для редактирования профиля пользователя.
+    Доступен только аутентифицированным пользователям.
+    """
+
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
