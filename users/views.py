@@ -1,8 +1,16 @@
 from rest_framework.filters import OrderingFilter
+from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIView
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from users.models import Payment
-from users.serializers import PaymentSerializer
+from users.models import Payment, User
+from users.serializers import (
+    PaymentSerializer,
+    UserProfileSerializer,
+    UserPublicProfileSerializer,
+    UserSerializer,
+)
 
 
 class PaymentViewSet(ModelViewSet):
@@ -10,6 +18,7 @@ class PaymentViewSet(ModelViewSet):
     serializer_class = PaymentSerializer
     filter_backends = [OrderingFilter]
     ordering_fields = ["payment_date"]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -23,3 +32,58 @@ class PaymentViewSet(ModelViewSet):
         if method:
             qs = qs.filter(method=method)
         return qs
+
+
+class UserProfileUpdateView(UpdateAPIView):
+    """
+    API endpoint для редактирования профиля пользователя.
+    Доступен только аутентифицированным пользователям.
+    """
+
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+
+class UserProfileDetailView(RetrieveAPIView):
+    """
+    Просмотр профиля любого пользователя.
+    Свой профиль — полная информация,
+    чужой профиль — только общая (без фамилии, истории платежей и пароля).
+    """
+
+    queryset = User.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if request.user == instance:
+            serializer_class = UserProfileSerializer
+        else:
+            serializer_class = UserPublicProfileSerializer
+        serializer = serializer_class(instance)
+        return Response(serializer.data)
+
+
+class UserCreateAPIView(CreateAPIView):
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
+    permission_classes = [AllowAny]
+
+    def perform_create(self, serializer):
+        user = serializer.save(is_active=True)
+        user.set_password(user.password)
+        user.save()
+
+
+class UserViewSet(ModelViewSet):
+    """
+    Полный CRUD по пользователям.
+    Доступен только администратору.
+    """
+
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminUser]
