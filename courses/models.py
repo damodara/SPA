@@ -26,7 +26,9 @@ class Lesson(models.Model):
         Course,
         on_delete=models.CASCADE,
         related_name="lessons",
-        verbose_name="Курс"
+        verbose_name="Курс",
+        blank=True,
+        null=True,
     )
     name = models.CharField(max_length=100, verbose_name="Название урока")
     description = models.TextField(verbose_name="Описание урока", blank=True, null=True)
@@ -36,13 +38,12 @@ class Lesson(models.Model):
     video_link = models.URLField(
         unique=True, verbose_name="Ссылка на видео", blank=True, null=True
     )
-    course = models.ForeignKey(
-        Course,
-        on_delete=models.CASCADE,
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name="Курс",
-        related_name="lesson_set",
+        verbose_name="Владелец",
     )
 
     class Meta:

@@ -1,10 +1,10 @@
 from rest_framework.filters import OrderingFilter
-from rest_framework.generics import UpdateAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import CreateAPIView, UpdateAPIView
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 
 from users.models import Payment, User
-from users.serializers import PaymentSerializer, UserProfileSerializer
+from users.serializers import PaymentSerializer, UserProfileSerializer, UserSerializer
 
 
 class PaymentViewSet(ModelViewSet):
@@ -12,6 +12,7 @@ class PaymentViewSet(ModelViewSet):
     serializer_class = PaymentSerializer
     filter_backends = [OrderingFilter]
     ordering_fields = ["payment_date"]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -38,3 +39,25 @@ class UserProfileUpdateView(UpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class UserCreateAPIView(CreateAPIView):
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
+    permission_classes = [AllowAny]
+
+    def perform_create(self, serializer):
+        user = serializer.save(is_active=True)
+        user.set_password(user.password)
+        user.save()
+
+
+class UserViewSet(ModelViewSet):
+    """
+    Полный CRUD по пользователям.
+    Доступен только администратору.
+    """
+
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminUser]
