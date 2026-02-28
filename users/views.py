@@ -1,10 +1,16 @@
 from rest_framework.filters import OrderingFilter
-from rest_framework.generics import CreateAPIView, UpdateAPIView
+from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIView
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from users.models import Payment, User
-from users.serializers import PaymentSerializer, UserProfileSerializer, UserSerializer
+from users.serializers import (
+    PaymentSerializer,
+    UserProfileSerializer,
+    UserPublicProfileSerializer,
+    UserSerializer,
+)
 
 
 class PaymentViewSet(ModelViewSet):
@@ -39,6 +45,26 @@ class UserProfileUpdateView(UpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class UserProfileDetailView(RetrieveAPIView):
+    """
+    Просмотр профиля любого пользователя.
+    Свой профиль — полная информация,
+    чужой профиль — только общая (без фамилии, истории платежей и пароля).
+    """
+
+    queryset = User.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if request.user == instance:
+            serializer_class = UserProfileSerializer
+        else:
+            serializer_class = UserPublicProfileSerializer
+        serializer = serializer_class(instance)
+        return Response(serializer.data)
 
 
 class UserCreateAPIView(CreateAPIView):

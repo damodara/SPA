@@ -24,6 +24,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "email")
 
 
+class UserPublicProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("id", "email", "first_name", "city", "avatar")
+
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
