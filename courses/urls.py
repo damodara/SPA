@@ -9,12 +9,13 @@ from courses.views import (
     LessonListAPIView,
     LessonRetrieveAPIView,
     LessonUpdateAPIView,
+    SubscriptionAPIView,
 )
 
 app_name = CoursesConfig.name
 
 router = SimpleRouter()
-router.register("", CourseViewSet)
+router.register("courses", CourseViewSet, basename="course")
 
 urlpatterns = [
     path("lessons/", LessonListAPIView.as_view(), name="lessons_list"),
@@ -26,5 +27,8 @@ urlpatterns = [
     path(
         "lessons/<int:pk>/delete/", LessonDestroyAPIView.as_view(), name="lesson_delete"
     ),
+    path("subscription/", SubscriptionAPIView.as_view(), name="subscription"),
 ]
+
+# Добавляем маршруты ViewSet
 urlpatterns += router.urls
