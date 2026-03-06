@@ -33,7 +33,12 @@ class CourseViewSet(ModelViewSet):
         permission_classes (list): Базовые права доступа — только авторизованные пользователи.
     """
 
-    queryset = Course.objects.all().select_related('owner').prefetch_related('lessons', 'subscriptions')
+    queryset = (
+        Course.objects.all()
+        .select_related("owner")
+        .prefetch_related("lessons", "subscriptions")
+        .order_by("id")
+    )
     serializer_class = CourseSerializer
     pagination_class = CourseLessonPagination
     permission_classes = [IsAuthenticated]
@@ -165,7 +170,7 @@ class LessonListAPIView(ListAPIView):
         Returns:
             QuerySet: Отфильтрованный набор уроков.
         """
-        qs = Lesson.objects.all().select_related('owner', 'course')
+        qs = Lesson.objects.all().select_related("owner", "course").order_by("id")
         user = self.request.user
         if not user.is_authenticated:
             return Lesson.objects.none()

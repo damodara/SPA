@@ -34,6 +34,9 @@ def validate_youtube_url(value):
     Note:
         Пустые пути или отсутствующие идентификаторы видео считаются ошибкой.
     """
+    if value in (None, ""):
+        return value
+
     try:
         parsed_url = urlparse(value)
 
@@ -51,5 +54,7 @@ def validate_youtube_url(value):
 
         raise ValidationError(f"Ссылки разрешены только на YouTube (youtube.com или youtu.be), получено: {value}")
 
-    except Exception as e:
+    except ValidationError:
+        raise
+    except Exception:
         raise ValidationError(f"Некорректный URL: {value}")

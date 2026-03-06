@@ -16,12 +16,11 @@ class LessonSerializer(serializers.ModelSerializer):
                    Допускает пустые значения, но при наличии — должна вести на YouTube.
     """
 
-    video_url = serializers.URLField(
-        source='video_link',
+    video_link = serializers.URLField(
         validators=[validate_youtube_url],
         required=False,
         allow_blank=True,
-        allow_null=True
+        allow_null=True,
     )
 
     class Meta:
@@ -30,23 +29,6 @@ class LessonSerializer(serializers.ModelSerializer):
         """
         model = Lesson
         fields = "__all__"
-
-    def to_representation(self, instance):
-        """
-        Переопределяет вывод данных при сериализации.
-
-        Заменяет ключ 'video_link' на 'video_url' в выходных данных,
-        даже если поле не заполнено.
-
-        Args:
-            instance (Lesson): Экземпляр модели Lesson.
-
-        Returns:
-            dict: Сериализованные данные с ключом 'video_url'.
-        """
-        data = super().to_representation(instance)
-        data['video_url'] = instance.video_link
-        return data
 
 
 class CourseSerializer(serializers.ModelSerializer):
@@ -81,7 +63,7 @@ class CourseSerializer(serializers.ModelSerializer):
         Returns:
             int: Количество уроков в курсе.
         """
-        return obj.lesson_set.count()
+        return obj.lessons.count()
 
     def get_is_subscribed(self, obj):
         """

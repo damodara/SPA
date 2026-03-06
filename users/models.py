@@ -1,11 +1,44 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import BaseUserManager, AbstractUser
 from django.db import models
 
-from courses.models import Course, Lesson
+
+# Кастомный менеджер пользователя
+class UserManager(BaseUserManager):
+    """
+    Менеджер для модели User без username.
+    Требуется, чтобы создание пользователя работало через email.
+    """
+
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('У пользователя должен быть email')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Суперпользователь должен иметь is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Суперпользователь должен иметь is_superuser=True.')
+
+        return self.create_user(email, password, **extra_fields)
 
 
 class User(AbstractUser):
-    username = None
+    """
+    Кастомная модель пользователя.
+
+    Использует email вместо username для входа.
+    Поля phone, city, avatar — дополнительные данные.
+    """
+
+    username = None  # Поле отключено
     email = models.EmailField(
         unique=True, verbose_name="Email", help_text="Укажите email"
     )
@@ -31,33 +64,45 @@ class User(AbstractUser):
         help_text="Загрузите аватарку",
     )
 
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []
+    USERNAME_FIELD = "email"  # Аутентификация по email
+    REQUIRED_FIELDS = []  # Не требуется дополнительных полей при createsuperuser
+
+    objects = UserManager()  # Привязка кастомного менеджера
 
     class Meta:
         verbose_name = "Пользователь"
         verbose_name_plural = "Пользователи"
 
+    def __str__(self):
+        return self.email
+
 
 class Payment(models.Model):
+    """
+    Модель платежа.
+
+    Хранит информацию о платежах за курсы или уроки.
+    Поддерживает два способа оплаты: наличные и перевод.
+    """
+
     PAYMENT_METHOD_CHOICES = [
         ("cash", "Наличные"),
         ("transfer", "Перевод на счёт"),
     ]
 
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, verbose_name="Пользователь"
+        'users.User', on_delete=models.CASCADE, verbose_name="Пользователь"
     )
     payment_date = models.DateTimeField(auto_now_add=True, verbose_name="Дата оплаты")
     course = models.ForeignKey(
-        Course,
+        'courses.Course',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         verbose_name="Оплаченный курс",
     )
     lesson = models.ForeignKey(
-        Lesson,
+        'courses.Lesson',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

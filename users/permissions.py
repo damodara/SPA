@@ -28,7 +28,7 @@ class IsModerator(BasePermission):
 class IsOwner(BasePermission):
     """
     Пользователь является владельцем объекта (курса или урока).
-    Для урока владельцем считается владелец связанного курса.
+    Для урока владельцем считается поле owner самого урока.
     """
 
     def has_permission(self, request, view) -> bool:
@@ -41,7 +41,7 @@ class IsOwner(BasePermission):
         if isinstance(obj, Course):
             owner = obj.owner
         elif isinstance(obj, Lesson):
-            owner = getattr(obj.course, "owner", None)
+            owner = getattr(obj, "owner", None)
         else:
             owner = getattr(obj, "owner", None)
 
