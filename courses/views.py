@@ -106,7 +106,7 @@ class LessonCreateAPIView(CreateAPIView):
     При создании урока автоматически устанавливается владелец.
     """
 
-    queryset = Lesson.objects.all().select_related('owner', 'course')
+    queryset = Lesson.objects.all().select_related("owner", "course")
     serializer_class = LessonSerializer
     permission_classes = [IsAuthenticated, ~IsModerator]
 
@@ -129,7 +129,7 @@ class LessonUpdateAPIView(UpdateAPIView):
         - Пользователи из группы модераторов.
     """
 
-    queryset = Lesson.objects.all().select_related('owner', 'course')
+    queryset = Lesson.objects.all().select_related("owner", "course")
     serializer_class = LessonSerializer
     permission_classes = [IsAuthenticated, IsModerator | IsOwner]
 
@@ -186,7 +186,7 @@ class LessonRetrieveAPIView(RetrieveAPIView):
     Доступ разрешён владельцам урока или модераторам.
     """
 
-    queryset = Lesson.objects.all().select_related('owner', 'course')
+    queryset = Lesson.objects.all().select_related("owner", "course")
     serializer_class = LessonSerializer
     permission_classes = [IsAuthenticated, IsModerator | IsOwner]
 
@@ -218,7 +218,7 @@ class SubscriptionAPIView(APIView):
                      Пример: {"message": "подписка добавлена"}
         """
         user = request.user
-        course_id = request.data.get('course_id')
+        course_id = request.data.get("course_id")
 
         if not course_id:
             return Response({"error": "Требуется course_id"}, status=400)
@@ -233,9 +233,9 @@ class SubscriptionAPIView(APIView):
 
         if subs_item.exists():
             subs_item.delete()
-            message = 'подписка удалена'
+            message = "подписка удалена"
         else:
             Subscription.objects.create(user=user, course=course)
-            message = 'подписка добавлена'
+            message = "подписка добавлена"
 
         return Response({"message": message})

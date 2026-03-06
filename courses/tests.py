@@ -1,7 +1,8 @@
-from django.test import TestCase
 from django.contrib.auth import get_user_model
-from rest_framework.test import APITestCase
+from django.test import TestCase
 from rest_framework import status
+from rest_framework.test import APITestCase
+
 from .models import Course, Lesson, Subscription
 
 User = get_user_model()
@@ -10,36 +11,28 @@ User = get_user_model()
 class CoursesTestCase(APITestCase):
     def setUp(self):
         # Создаём пользователей ТОЛЬКО с email и password
-        self.user = User.objects.create_user(
-            email='user@test.ru',
-            password='test123'
-        )
+        self.user = User.objects.create_user(email="user@test.ru", password="test123")
         self.moderator = User.objects.create_user(
-            email='moderator@test.ru',
-            password='test123'
+            email="moderator@test.ru", password="test123"
         )
-        self.owner = User.objects.create_user(
-            email='owner@test.ru',
-            password='test123'
-        )
+        self.owner = User.objects.create_user(email="owner@test.ru", password="test123")
 
         # Добавляем модератора в группу
         from django.contrib.auth.models import Group
+
         group, created = Group.objects.get_or_create(name="moderators")
         self.moderator.groups.add(group)
 
         # Создаём курс и урок
         self.course = Course.objects.create(
-            name="Тестовый курс",
-            description="Описание курса",
-            owner=self.owner
+            name="Тестовый курс", description="Описание курса", owner=self.owner
         )
         self.lesson = Lesson.objects.create(
             name="Тестовый урок",
             description="Описание урока",
             video_link="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
             course=self.course,
-            owner=self.owner
+            owner=self.owner,
         )
 
         # URL-адреса
@@ -63,7 +56,7 @@ class CoursesTestCase(APITestCase):
             "name": "Новый урок",
             "description": "Описание",
             "video_link": "https://www.youtube.com/watch?v=abc123",
-            "course": self.course.id
+            "course": self.course.id,
         }
         response = self.client.post(self.lesson_create_url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -75,7 +68,7 @@ class CoursesTestCase(APITestCase):
         data = {
             "name": "Урок от модератора",
             "course": self.course.id,
-            "video_link": "https://www.youtube.com/watch?v=abc123"
+            "video_link": "https://www.youtube.com/watch?v=abc123",
         }
         response = self.client.post(self.lesson_create_url, data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -123,11 +116,11 @@ class CoursesTestCase(APITestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.lesson_list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 0)
+        self.assertEqual(len(response.data["results"]), 0)
 
         self.client.force_authenticate(user=self.moderator)
         response = self.client.get(self.lesson_list_url)
-        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(len(response.data["results"]), 1)
 
     def test_subscribe_to_course(self):
         """Пользователь может подписаться на курс."""
@@ -135,7 +128,9 @@ class CoursesTestCase(APITestCase):
         data = {"course_id": self.course.id}
         response = self.client.post(self.subscription_url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(Subscription.objects.filter(user=self.owner, course=self.course).exists())
+        self.assertTrue(
+            Subscription.objects.filter(user=self.owner, course=self.course).exists()
+        )
 
     def test_unsubscribe_from_course(self):
         """Пользователь может отписаться от курса."""
@@ -144,7 +139,9 @@ class CoursesTestCase(APITestCase):
         data = {"course_id": self.course.id}
         response = self.client.post(self.subscription_url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(Subscription.objects.filter(user=self.owner, course=self.course).exists())
+        self.assertFalse(
+            Subscription.objects.filter(user=self.owner, course=self.course).exists()
+        )
 
     def test_is_subscribed_in_course_serializer(self):
         """Поле is_subscribed корректно отображается в сериализаторе курса."""
@@ -152,11 +149,11 @@ class CoursesTestCase(APITestCase):
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(self.course_detail_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data['is_subscribed'])
+        self.assertTrue(response.data["is_subscribed"])
 
     def test_is_not_subscribed(self):
         """Поле is_subscribed = False, если нет подписки."""
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(self.course_detail_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(response.data['is_subscribed'])
+        self.assertFalse(response.data["is_subscribed"])

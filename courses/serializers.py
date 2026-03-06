@@ -27,6 +27,7 @@ class LessonSerializer(serializers.ModelSerializer):
         """
         Мета-настройки сериализатора.
         """
+
         model = Lesson
         fields = "__all__"
 
@@ -50,8 +51,9 @@ class CourseSerializer(serializers.ModelSerializer):
         """
         Мета-настройки сериализатора.
         """
+
         model = Course
-        fields = '__all__'
+        fields = "__all__"
 
     def get_lessons_count(self, obj):
         """
@@ -77,7 +79,7 @@ class CourseSerializer(serializers.ModelSerializer):
         Returns:
             bool: True — если пользователь подписан, иначе False.
         """
-        user = self.context['request'].user
+        user = self.context["request"].user
         if user.is_authenticated:
             return Subscription.objects.filter(user=user, course=obj).exists()
         return False
