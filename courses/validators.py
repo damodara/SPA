@@ -1,10 +1,38 @@
 from urllib.parse import urlparse
 from rest_framework.exceptions import ValidationError
 
+
 def validate_youtube_url(value):
     """
-    Валидатор для проверки, что ссылка ведёт только на YouTube.
-    Разрешены форматы: https://www.youtube.com/watch?v=... или https://youtu.be/...
+    Валидатор для проверки, что переданная ссылка ведёт на YouTube.
+
+    Проверяет, что URL соответствует одному из разрешённых форматов:
+        - https://www.youtube.com/watch?v=...
+        - https://youtube.com/watch?v=...
+        - https://youtu.be/...
+
+    Args:
+        value (str): URL-ссылка, которую необходимо проверить.
+
+    Returns:
+        str: Возвращает исходное значение, если оно корректно.
+
+    Raises:
+        ValidationError: Если ссылка не ведёт на YouTube или имеет некорректный формат.
+                         Также выбрасывается при попытке передать невалидный URL.
+
+    Примеры допустимых ссылок:
+        - "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        - "https://youtube.com/watch?v=dQw4w9WgXcQ"
+        - "https://youtu.be/dQw4w9WgXcQ"
+
+    Примеры недопустимых ссылок:
+        - "https://example.com"
+        - "https://youtube.com/evil_redirect?v=..."
+        - "https://youtu.be/"
+
+    Note:
+        Пустые пути или отсутствующие идентификаторы видео считаются ошибкой.
     """
     try:
         parsed_url = urlparse(value)
