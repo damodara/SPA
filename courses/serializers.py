@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from courses.models import Course, Lesson
+from courses.models import Course, Lesson, Subscription
 from courses.validators import validate_youtube_url
 
 
@@ -16,22 +16,25 @@ class LessonSerializer(serializers.ModelSerializer):
         model = Lesson
         fields = "__all__"
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['video_url'] = instance.video_link
+        return data
+
 
 class CourseSerializer(serializers.ModelSerializer):
     lessons_count = serializers.SerializerMethodField()
-    lessons = LessonSerializer(source="lesson_set", many=True, read_only=True)
+    is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
-        fields = [
-            "id",
-            "name",
-            "description",
-            "preview",
-            "owner",
-            "lessons_count",
-            "lessons",
-        ]
+        fields = '__all__'
 
     def get_lessons_count(self, obj):
         return obj.lesson_set.count()
+
+    def get_is_subscribed(self, obj):
+        user = self.context['request'].user
+        if user.is_authenticated:
+            return Subscription.objects.filter(user=user, course=obj).exists()
+        return False

@@ -3,12 +3,14 @@ from rest_framework.generics import (
     DestroyAPIView,
     ListAPIView,
     RetrieveAPIView,
-    UpdateAPIView,
+    UpdateAPIView, get_object_or_404,
 )
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 
-from courses.models import Course, Lesson
+from courses.models import Course, Lesson, Subscription
 from courses.serializers import CourseSerializer, LessonSerializer
 from users.permissions import IsModerator, IsOwner
 
@@ -100,3 +102,26 @@ class LessonRetrieveAPIView(RetrieveAPIView):
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
     permission_classes = [IsAuthenticated, IsModerator | IsOwner]
+
+
+class SubscriptionAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        course_id = request.data.get('course_id')
+
+        if not course_id:
+            return Response({"error": "Требуется course_id"}, status=400)
+
+        course = get_object_or_404(Course, id=course_id)
+        subs_item = Subscription.objects.filter(user=user, course=course)
+
+        if subs_item.exists():
+            subs_item.delete()
+            message = 'подписка удалена'
+        else:
+            Subscription.objects.create(user=user, course=course)
+            message = 'подписка добавлена'
+
+        return Response({"message": message})
