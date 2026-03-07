@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "users",
     "courses",
     "django_extensions",
+    "drf_yasg",
 ]
 
 MIDDLEWARE = [
@@ -113,3 +114,7 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
+
+# Stripe
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
