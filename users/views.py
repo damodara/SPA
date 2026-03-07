@@ -8,6 +8,8 @@ from rest_framework.viewsets import ModelViewSet
 from users.models import Payment, User
 from users.serializers import (PaymentSerializer, UserProfileSerializer,
                                UserPublicProfileSerializer, UserSerializer)
+from users.services import (create_stripe_checkout_session,
+                            create_stripe_price, create_stripe_product)
 
 
 class PaymentViewSet(ModelViewSet):
@@ -29,6 +31,40 @@ class PaymentViewSet(ModelViewSet):
         if method:
             qs = qs.filter(method=method)
         return qs
+
+    def perform_create(self, serializer):
+        """
+        При создании платежа через API:
+        - создаём продукт и цену в Stripe,
+        - создаём checkout-сессию,
+        - сохраняем ссылку и id сессии в Payment,
+        - метод оплаты выставляем как 'card'.
+        """
+        payment: Payment = serializer.save(user=self.request.user, method="card")
+
+        # Определяем название продукта
+        if payment.course:
+            product_name = f"Курс: {payment.course.name}"
+        elif payment.lesson:
+            product_name = f"Урок: {payment.lesson.name}"
+        else:
+            product_name = f"Оплата #{payment.pk}"
+
+        # Создание объектов в Stripe
+        product_id = create_stripe_product(product_name)
+        price_id = create_stripe_price(product_id, payment.amount)
+
+        # URL-ы для успешной / неуспешной оплаты
+        request = self.request
+        domain = request.build_absolute_uri("/").rstrip("/")
+        success_url = f"{domain}/payments/success/"
+        cancel_url = f"{domain}/payments/cancel/"
+
+        session_data = create_stripe_checkout_session(price_id, success_url, cancel_url)
+
+        payment.stripe_session_id = session_data["id"]
+        payment.link = session_data["url"]
+        payment.save(update_fields=["stripe_session_id", "link"])
 
 
 class UserProfileUpdateView(UpdateAPIView):

@@ -4,6 +4,8 @@ from users.models import Payment, User
 
 
 class PaymentSerializer(serializers.ModelSerializer):
+    payment_url = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Payment
         fields = [
@@ -14,7 +16,11 @@ class PaymentSerializer(serializers.ModelSerializer):
             "lesson",
             "amount",
             "method",
+            "payment_url",
         ]
+
+    def get_payment_url(self, obj):
+        return obj.link
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
