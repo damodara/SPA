@@ -1,16 +1,13 @@
 from rest_framework.filters import OrderingFilter
-from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIView
+from rest_framework.generics import (CreateAPIView, RetrieveAPIView,
+                                     UpdateAPIView)
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from users.models import Payment, User
-from users.serializers import (
-    PaymentSerializer,
-    UserProfileSerializer,
-    UserPublicProfileSerializer,
-    UserSerializer,
-)
+from users.serializers import (PaymentSerializer, UserProfileSerializer,
+                               UserPublicProfileSerializer, UserSerializer)
 
 
 class PaymentViewSet(ModelViewSet):

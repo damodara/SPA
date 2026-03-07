@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "users",
     "courses",
     "django_extensions",
+    "drf_yasg",
 ]
 
 MIDDLEWARE = [
