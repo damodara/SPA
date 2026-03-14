@@ -1,6 +1,11 @@
-from rest_framework.generics import (CreateAPIView, DestroyAPIView,
-                                     ListAPIView, RetrieveAPIView,
-                                     UpdateAPIView, get_object_or_404)
+from rest_framework.generics import (
+    CreateAPIView,
+    DestroyAPIView,
+    ListAPIView,
+    RetrieveAPIView,
+    UpdateAPIView,
+    get_object_or_404,
+)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,6 +14,7 @@ from rest_framework.viewsets import ModelViewSet
 from courses.models import Course, Lesson, Subscription
 from courses.paginators import CourseLessonPagination
 from courses.serializers import CourseSerializer, LessonSerializer
+from courses.tasks import send_course_update_email
 from users.permissions import IsModerator, IsOwner
 
 
@@ -92,6 +98,14 @@ class CourseViewSet(ModelViewSet):
         """
         serializer.save(owner=self.request.user)
 
+    def perform_update(self, serializer):
+        """
+        При обновлении курса запускает асинхронную рассылку писем
+        всем пользователям, подписанным на этот курс.
+        """
+        course = serializer.save()
+        send_course_update_email.delay(course.id)
+
 
 class LessonCreateAPIView(CreateAPIView):
     """
@@ -127,6 +141,29 @@ class LessonUpdateAPIView(UpdateAPIView):
     queryset = Lesson.objects.all().select_related("owner", "course")
     serializer_class = LessonSerializer
     permission_classes = [IsAuthenticated, IsModerator | IsOwner]
+
+    def perform_update(self, serializer):
+        """
+        При обновлении урока отправляет уведомление только в том случае,
+        если курс не обновлялся более 4 часов.
+        """
+        lesson = serializer.save()
+        course = lesson.course
+        if not course:
+            return
+
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        if course.updated_at and timezone.now() - course.updated_at < timedelta(
+            hours=4
+        ):
+            return
+
+        # Обновляем время последнего изменения курса и запускаем рассылку
+        course.save(update_fields=["updated_at"])
+        send_course_update_email.delay(course.id)
 
 
 class LessonDestroyAPIView(DestroyAPIView):
