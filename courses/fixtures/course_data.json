@@ -1,0 +1,12 @@
+[
+  {
+    "model": "courses.course",
+    "pk": 1,
+    "fields": {
+      "name": "Основы Python",
+      "description": "Курс для начинающих",
+      "preview": null,
+      "owner": 1
+    }
+  }
+]
