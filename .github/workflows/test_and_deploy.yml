@@ -59,11 +59,11 @@ jobs:
     - name: Deploy to server
       uses: appleboy/ssh-action@v1.2.0
       with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
         script: |
-          cd /path/to/your/project
+          cd ${{ secrets.DEPLOY_DIR }}
           git pull origin ${{ github.ref_name }}
           pip install -r requirements.txt
           python manage.py migrate
