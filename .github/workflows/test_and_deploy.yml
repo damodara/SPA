@@ -1,0 +1,96 @@
+name: Test and Deploy
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: github_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      POSTGRES_DB: github_ci
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run tests
+      run: |
+        python manage.py test
+
+  # Нужны Secrets: SERVER_IP, SSH_USER, SSH_KEY (полный текст приватного ключа OpenSSH,
+  # с строками -----BEGIN ... PRIVATE KEY----- и -----END ...-----).
+  # Таймаут :22 обычно из‑за фаервола/VPS — разрешите SSH с интернета или с IP GitHub Actions.
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # Ясная ошибка вместо ssh.ParsePrivateKey: no key found
+    - name: Проверка секретов SSH
+      env:
+        SSH_KEY: ${{ secrets.SSH_KEY }}
+        SERVER_IP: ${{ secrets.SERVER_IP }}
+        SSH_USER: ${{ secrets.SSH_USER }}
+        DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+      run: |
+        if [ -z "$SSH_KEY" ]; then
+          echo "::error::SSH_KEY пустой или нет такого Secret. Репозиторий → Settings → Secrets and variables → Actions."
+          echo "::error::В SSH_KEY должен быть ПРИВАТНЫЙ ключ (файл без .pub), целиком, с строками BEGIN/END."
+          exit 1
+        fi
+        if [ -z "$SERVER_IP" ] || [ -z "$SSH_USER" ] || [ -z "$DEPLOY_DIR" ]; then
+          echo "::error::Задайте secrets: SERVER_IP, SSH_USER, DEPLOY_DIR"
+          exit 1
+        fi
+
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v1.2.0
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        port: 22
+        timeout: 120s
+        command_timeout: 20m
+        script: |
+          cd ${{ secrets.DEPLOY_DIR }}
+          git pull origin ${{ github.ref_name }}
+          pip install -r requirements.txt
+          python manage.py migrate
+          python manage.py collectstatic --noinput
+          sudo systemctl restart gunicorn
+          sudo systemctl restart nginx
