@@ -32,7 +32,7 @@ jobs:
       POSTGRES_PORT: "5432"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -57,7 +57,25 @@ jobs:
     if: success()
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+
+    # Ясная ошибка вместо ssh.ParsePrivateKey: no key found
+    - name: Проверка секретов SSH
+      env:
+        SSH_KEY: ${{ secrets.SSH_KEY }}
+        SERVER_IP: ${{ secrets.SERVER_IP }}
+        SSH_USER: ${{ secrets.SSH_USER }}
+        DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+      run: |
+        if [ -z "$SSH_KEY" ]; then
+          echo "::error::SSH_KEY пустой или нет такого Secret. Репозиторий → Settings → Secrets and variables → Actions."
+          echo "::error::В SSH_KEY должен быть ПРИВАТНЫЙ ключ (файл без .pub), целиком, с строками BEGIN/END."
+          exit 1
+        fi
+        if [ -z "$SERVER_IP" ] || [ -z "$SSH_USER" ] || [ -z "$DEPLOY_DIR" ]; then
+          echo "::error::Задайте secrets: SERVER_IP, SSH_USER, DEPLOY_DIR"
+          exit 1
+        fi
 
     - name: Deploy to server
       uses: appleboy/ssh-action@v1.2.0
