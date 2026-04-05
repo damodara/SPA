@@ -48,6 +48,9 @@ jobs:
       run: |
         python manage.py test
 
+  # Нужны Secrets: SERVER_IP, SSH_USER, SSH_KEY (полный текст приватного ключа OpenSSH,
+  # с строками -----BEGIN ... PRIVATE KEY----- и -----END ...-----).
+  # Таймаут :22 обычно из‑за фаервола/VPS — разрешите SSH с интернета или с IP GitHub Actions.
   deploy:
     needs: test
     runs-on: ubuntu-latest
@@ -62,6 +65,9 @@ jobs:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
+        port: 22
+        timeout: 120s
+        command_timeout: 20m
         script: |
           cd ${{ secrets.DEPLOY_DIR }}
           git pull origin ${{ github.ref_name }}
