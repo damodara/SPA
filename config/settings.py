@@ -10,6 +10,9 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY and os.getenv("CI"):
+    # GitHub Actions и др. CI без .env — нужен непустой ключ для simplejwt/Django
+    SECRET_KEY = "django-insecure-ci-only-not-for-production"
 
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
@@ -146,7 +149,12 @@ CELERY_BEAT_SCHEDULE = {
 
 CACHES = {
     "default": {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'redis://redis:6379/1',
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://redis:6379/1",
     }
 }
+
+if os.getenv("CI"):
+    CACHES["default"] = {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
