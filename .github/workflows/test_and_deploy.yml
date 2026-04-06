@@ -48,9 +48,9 @@ jobs:
       run: |
         python manage.py test
 
-  # Нужны Secrets: SERVER_IP, SSH_USER, SSH_KEY (полный текст приватного ключа OpenSSH,
-  # с строками -----BEGIN ... PRIVATE KEY----- и -----END ...-----).
-  # Таймаут :22 обычно из‑за фаервола/VPS — разрешите SSH с интернета или с IP GitHub Actions.
+  # Docker Compose деплой по SSH.
+  # Нужны Secrets: SERVER_IP, SSH_USER, SSH_KEY, DEPLOY_DIR, APP_ENV_FILE.
+  # APP_ENV_FILE: многострочный контент .env целиком.
   deploy:
     needs: test
     runs-on: ubuntu-latest
@@ -59,38 +59,45 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # Ясная ошибка вместо ssh.ParsePrivateKey: no key found
-    - name: Проверка секретов SSH
+    - name: Проверка секретов деплоя
       env:
         SSH_KEY: ${{ secrets.SSH_KEY }}
         SERVER_IP: ${{ secrets.SERVER_IP }}
         SSH_USER: ${{ secrets.SSH_USER }}
         DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+        APP_ENV_FILE: ${{ secrets.APP_ENV_FILE }}
       run: |
         if [ -z "$SSH_KEY" ]; then
           echo "::error::SSH_KEY пустой или нет такого Secret. Репозиторий → Settings → Secrets and variables → Actions."
           echo "::error::В SSH_KEY должен быть ПРИВАТНЫЙ ключ (файл без .pub), целиком, с строками BEGIN/END."
           exit 1
         fi
-        if [ -z "$SERVER_IP" ] || [ -z "$SSH_USER" ] || [ -z "$DEPLOY_DIR" ]; then
-          echo "::error::Задайте secrets: SERVER_IP, SSH_USER, DEPLOY_DIR"
+        if [ -z "$SERVER_IP" ] || [ -z "$SSH_USER" ] || [ -z "$DEPLOY_DIR" ] || [ -z "$APP_ENV_FILE" ]; then
+          echo "::error::Задайте secrets: SERVER_IP, SSH_USER, DEPLOY_DIR, APP_ENV_FILE"
           exit 1
         fi
 
-    - name: Deploy to server
+    - name: Deploy to server (Docker Compose)
       uses: appleboy/ssh-action@v1.2.0
+      env:
+        APP_ENV_FILE: ${{ secrets.APP_ENV_FILE }}
       with:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
         port: 22
         timeout: 120s
         command_timeout: 20m
+        envs: APP_ENV_FILE
         script: |
+          set -e
           cd ${{ secrets.DEPLOY_DIR }}
+          printf "%s\n" "$APP_ENV_FILE" > .env
           git pull origin ${{ github.ref_name }}
-          pip install -r requirements.txt
-          python manage.py migrate
-          python manage.py collectstatic --noinput
-          sudo systemctl restart gunicorn
-          sudo systemctl restart nginx
+          docker compose pull || true
+          docker compose build --pull
+          docker compose up -d --remove-orphans
+          docker compose exec -T web python manage.py migrate
+          docker compose exec -T web python manage.py collectstatic --noinput
+          docker compose ps
