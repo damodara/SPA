@@ -70,6 +70,9 @@ jobs:
         DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
         APP_ENV_FILE: ${{ secrets.APP_ENV_FILE }}
       run: |
+        echo "DEPLOY_DIR length: ${#DEPLOY_DIR}"
+        printf 'DEPLOY_DIR bytes: '
+        printf '%s' "$DEPLOY_DIR" | od -An -t x1
         if [ -z "$SSH_KEY" ]; then
           echo "::error::SSH_KEY пустой или нет такого Secret. Репозиторий → Settings → Secrets and variables → Actions."
           echo "::error::В SSH_KEY должен быть ПРИВАТНЫЙ ключ (файл без .pub), целиком, с строками BEGIN/END."
@@ -84,26 +87,45 @@ jobs:
       uses: appleboy/ssh-action@v1.2.0
       env:
         APP_ENV_FILE: ${{ secrets.APP_ENV_FILE }}
+        DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
       with:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
-        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        
         port: 22
         timeout: 120s
         command_timeout: 20m
-        envs: APP_ENV_FILE
+        envs: APP_ENV_FILE,DEPLOY_DIR
         script: |
           set -euxo pipefail
-          docker --version
-          docker compose version
-          cd ${{ secrets.DEPLOY_DIR }}
-          test -d .git
+          if docker info >/dev/null 2>&1; then
+            DOCKER_CMD="docker"
+          elif sudo -n docker info >/dev/null 2>&1; then
+            DOCKER_CMD="sudo docker"
+          else
+            echo "No permission to access Docker daemon for current SSH user"
+            exit 1
+          fi
+          $DOCKER_CMD --version
+          $DOCKER_CMD compose version
+          DEPLOY_DIR="$(printf '%s' "$DEPLOY_DIR" | tr -d '\r' | sed 's/^"//; s/"$//' | xargs)"
+          if [ -z "$DEPLOY_DIR" ]; then
+            echo "DEPLOY_DIR is empty after normalization"
+            exit 1
+          fi
+          mkdir -p "$DEPLOY_DIR"
+          cd "$DEPLOY_DIR"
+          if [ ! -d .git ]; then
+            git clone https://github.com/damodara/SPA.git .
+          fi
           printf "%s\n" "$APP_ENV_FILE" > .env
-          git pull origin ${{ github.ref_name }}
-          docker compose pull || true
-          docker compose build --pull
-          docker compose up -d --remove-orphans
-          docker compose exec -T web python manage.py migrate
-          docker compose exec -T web python manage.py collectstatic --noinput
-          docker compose ps
+          git fetch origin ${{ github.ref_name }}
+          git checkout -B ${{ github.ref_name }} origin/${{ github.ref_name }}
+          git reset --hard origin/${{ github.ref_name }}
+          $DOCKER_CMD compose pull || true
+          $DOCKER_CMD compose build --pull
+          $DOCKER_CMD compose up -d --remove-orphans
+          $DOCKER_CMD compose exec -T web python manage.py migrate
+          $DOCKER_CMD compose exec -T web python manage.py collectstatic --noinput
+          $DOCKER_CMD compose ps
