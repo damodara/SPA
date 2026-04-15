@@ -73,8 +73,6 @@ Workflow: `.github/workflows/test_and_deploy.yml`
 - `DEPLOY_DIR` — директория проекта на сервере
 - `APP_ENV_FILE` — содержимое серверного `.env` целиком (многострочный secret)
 
-Опционально:
-- `SSH_PASSPHRASE` — passphrase, если ключ зашифрован
 
 ## Подготовка сервера
 На сервере должны быть установлены:
