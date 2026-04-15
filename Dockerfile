@@ -27,5 +27,5 @@ RUN mkdir -p /app/media
 # Открываем порт 8000 для взаимодействия с приложением
 EXPOSE 8000
 
-# Определяем команду для запуска приложения
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Базовая команда контейнера (переопределяется в docker-compose при необходимости)
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
