@@ -92,7 +92,7 @@ jobs:
         host: ${{ secrets.SERVER_IP }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
-        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        
         port: 22
         timeout: 120s
         command_timeout: 20m
@@ -112,7 +112,9 @@ jobs:
             git clone https://github.com/damodara/SPA.git .
           fi
           printf "%s\n" "$APP_ENV_FILE" > .env
-          git pull origin ${{ github.ref_name }}
+          git fetch origin ${{ github.ref_name }}
+          git checkout -B ${{ github.ref_name }} origin/${{ github.ref_name }}
+          git reset --hard origin/${{ github.ref_name }}
           docker compose pull || true
           docker compose build --pull
           docker compose up -d --remove-orphans
